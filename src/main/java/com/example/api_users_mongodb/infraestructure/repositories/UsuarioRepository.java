@@ -8,6 +8,8 @@ public interface UsuarioRepository extends MongoRepository<UsuarioEntity, String
     
     UsuarioEntity findByEmail(String email);
 
+    Boolean existsByEmail(String email);
+
     @Transactional
     void deleteByEmail(String email);
 }

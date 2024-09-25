@@ -9,6 +9,8 @@ import com.example.api_users_mongodb.business.converter.UsuarioConverter;
 import com.example.api_users_mongodb.business.converter.UsuarioMapper;
 import com.example.api_users_mongodb.infraestructure.entities.*;
 import com.example.api_users_mongodb.infraestructure.exceptions.BusinessException;
+import com.example.api_users_mongodb.infraestructure.exceptions.ConflictException;
+import com.example.api_users_mongodb.infraestructure.exceptions.UnprocessableEntityException;
 import com.example.api_users_mongodb.infraestructure.repositories.UsuarioRepository;
 import static org.springframework.util.Assert.notNull;
 
@@ -27,11 +29,18 @@ public class UsuarioService {
 
     public UsuarioResponseDTO gravarUsuarios(UsuarioRequestDTO usuarioRequestDTO) {
         try {
-            notNull(usuarioRequestDTO, "Os dados do usuário são obrigatórios");
+            Boolean existeUsuario = usuarioRepository.existsByEmail(usuarioRequestDTO.getEmail());
+            if(existeUsuario.equals(true)) {
+                throw new ConflictException("Já existe usuário cadastrado com esse e-mail");
+            }
+            
             UsuarioEntity usuarioEntity = salvaUsuario(usuarioConverter.paraUsuarioEntity(usuarioRequestDTO));
             EnderecoEntity enderecoEntity = enderecoService.salvaEndereco(
                 usuarioConverter.paraEnderecoEntity(usuarioRequestDTO.getEndereco(), usuarioEntity.getId()));
+            
             return usuarioMapper.paraUsuarioResponseDTO(usuarioEntity, enderecoEntity);
+        } catch (ConflictException e) {
+            throw new ConflictException(e.getMessage());
         } catch (Exception e) {
             throw new BusinessException("Erro ao gravar dados de usuário", e);
         }
@@ -44,6 +53,8 @@ public class UsuarioService {
             EnderecoEntity enderecoEntity = enderecoService.findByUsuarioId(usuarioEntity.getId());
 
             return usuarioMapper.paraUsuarioResponseDTO(usuarioEntity, enderecoEntity);
+        } catch (IllegalArgumentException e) {
+            throw new UnprocessableEntityException(e.getMessage());
         } catch (Exception e) {
             throw new BusinessException("Erro ao buscar dados de usuário", e);
         }
@@ -53,9 +64,13 @@ public class UsuarioService {
     public void deletaDadosUsuario(String email) {
         try {
             UsuarioEntity usuarioEntity = usuarioRepository.findByEmail(email);
+            notNull(usuarioEntity, "Usuário não encontrado!");
+
             usuarioRepository.deleteByEmail(email);
             enderecoService.deleteByUsuarioId(usuarioEntity.getId());
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            throw new UnprocessableEntityException(e.getMessage());
+        }catch (Exception e) {
             throw new BusinessException("Erro ao excluir usuário", e);
         }
     }   
