@@ -51,9 +51,13 @@ public class UsuarioService {
 
     @Transactional
     public void deletaDadosUsuario(String email) {
-        UsuarioEntity usuarioEntity = usuarioRepository.findByEmail(email);
-        usuarioRepository.deleteByEmail(email);
-        enderecoService.deleteByUsuarioId(usuarioEntity.getId());
-    }
+        try {
+            UsuarioEntity usuarioEntity = usuarioRepository.findByEmail(email);
+            usuarioRepository.deleteByEmail(email);
+            enderecoService.deleteByUsuarioId(usuarioEntity.getId());
+        } catch (Exception e) {
+            throw new BusinessException("Erro ao excluir usuário", e);
+        }
+    }   
 
 }
